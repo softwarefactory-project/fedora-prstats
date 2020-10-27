@@ -1,0 +1,24 @@
+{
+  "name": "re-prstats",
+  "version": "0.1.0",
+  "scripts": {
+    "build": "bsb -make-world",
+    "start": "bsb -make-world -w",
+    "clean": "bsb -clean-world",
+    "test": "echo no test!"
+  },
+  "keywords": [
+    "BuckleScript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "bs-platform": "^8.2.0",
+    "@glennsl/bs-json": "^5.0.2",
+    "re-cli": "../../software-factory/re-cli"
+  },
+  "dependencies": {
+    "tablecloth-bucklescript": "https://github.com/darklang/tablecloth",
+    "re-cli": "../../software-factory/re-cli"
+  }
+}
