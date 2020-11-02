@@ -37,6 +37,33 @@ let loadData = (): Result.t(List.t(pr), string) => {
   loadJsonData()->Result.andThen(~f=decode);
 };
 
+let loadYAMLtoJSON = (content: string): Result.t(Js.Json.t, string) => {
+  let rec s = yaml =>
+    switch (yaml) {
+    | `Bool(value) => Js.Json.boolean(value)
+    | `Float(number) => Js.Json.number(number)
+    | `String(str) => Js.Json.string(str)
+    | `Array(arr) => List.map(~f=s, arr) |> Array.fromList |> Js.Json.array
+    | `Object(list) =>
+      Js.Dict.fromList(
+        List.map(~f=((key, value)) => (key, s(value)), list),
+      )
+      |> Js.Json.object_
+    | `Null => Js.Json.null
+    };
+  let parse = (content: string) => {
+    Yaml.parse(content)->s;
+  };
+  ReCli.Python.catchToResult(parse, content);
+};
+
+let loadResourcesData = (): Result.t(SF.Resources.top, string) => {
+  "/home/user/git/pagure.io/fedora-project-config/resources/fedora-distgits.yaml"
+  ->ReCli.Python.read_file
+  ->Result.andThen(~f=loadYAMLtoJSON)
+  ->Result.andThen(~f=json => Ok(SF.Resources.parse(json)));
+};
+
 let getProjectsList = (data: List.t(pr)): List.t(string) => {
   data
   // Keep unique project names
@@ -78,26 +105,35 @@ let filterProjectByPRCount = (data: List.t(project), prcount: int) => {
   data->List.filter(~f=p => p.totalPrs >= prcount);
 };
 
-let display1 = () =>
+let run = () => {
   loadData()
   ->Result.andThen(~f=getPRCountByProjects)
   ->Result.unwrap(~default=[])
-  ->List.map(~f=Js.log);
-
-let display2 = () => {
-  loadData()
-  ->Result.andThen(~f=getProjectsCount)
-  ->Result.unwrap(~default=0)
-  ->Js.log;
-};
-
-let display3 = () => {
-  loadData()
-  ->Result.andThen(~f=getPRCountByProjects)
-  ->Result.unwrap(~default=[])
-  ->filterProjectByPRCount(3)
+  ->filterProjectByPRCount(2)
+  ->{
+      (data: List.t(project)) => {
+        Js.log("Total: " ++ (List.length(data) |> Int.toString));
+        data;
+      };
+    }
   ->List.sort(~compare=(e1, e2) => String.compare(e1.name, e2.name))
   ->List.map(~f=Js.log);
 };
 
-display3();
+// run();
+loadResourcesData()
+->Result.unwrap(
+    ~default={
+      resources: {
+        projects: Some([]),
+        connections: Some([]),
+        tenants: Some([]),
+        repos: Some([]),
+      },
+    },
+  )
+->{
+    (top: SF.Resources.top) => {
+      Js.log(top);
+    };
+  };

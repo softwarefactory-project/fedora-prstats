@@ -13,7 +13,10 @@
   "bs-dependencies": [
      "tablecloth-bucklescript",
      "@glennsl/bs-json",
-     "re-cli"
+     "@glennsl/bs-jest",
+     "bs-yaml",
+     "re-cli",
+     "@softwarefactory-project/re-sf"
   ],
   "warnings": {
     "error" : "+101"
