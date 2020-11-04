@@ -14,16 +14,15 @@
   "license": "MIT",
   "devDependencies": {
     "@glennsl/bs-json": "^5.0.2",
-    "@softwarefactory-project/re-sf": "../../software-factory/re-sf",
+    "@softwarefactory-project/re-sf": "../../re-sf",
     "bs-platform": "^8.2.0",
-    "bs-yaml": "^1.0.2",
-    "re-cli": "../../software-factory/re-cli"
+    "re-cli": "../../re-cli"
   },
   "dependencies": {
-    "@glennsl/bs-jest": "^0.6.0",
-    "@softwarefactory-project/re-sf": "../../software-factory/re-sf",
-    "bs-yaml": "^1.0.2",
-    "re-cli": "../../software-factory/re-cli",
+    "@glennsl/bs-json": "^5.0.2",
+    "@softwarefactory-project/re-sf": "../../re-sf",
+    "decco": "^1.3.0",
+    "re-cli": "../../re-cli",
     "tablecloth-bucklescript": "https://github.com/darklang/tablecloth"
   }
 }

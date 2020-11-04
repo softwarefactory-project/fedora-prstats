@@ -2,8 +2,8 @@
   "name": "re-prstats",
   "version": "0.1.0",
   "sources": {
-    "dir" : "src",
-    "subdirs" : true
+    "dir": "src",
+    "subdirs": true
   },
   "package-specs": {
     "module": "commonjs",
@@ -11,15 +11,14 @@
   },
   "suffix": ".bs.js",
   "bs-dependencies": [
-     "tablecloth-bucklescript",
-     "@glennsl/bs-json",
-     "@glennsl/bs-jest",
-     "bs-yaml",
-     "re-cli",
-     "@softwarefactory-project/re-sf"
+    "tablecloth-bucklescript",
+    "@glennsl/bs-json",
+    "decco",
+    "re-cli",
+    "@softwarefactory-project/re-sf"
   ],
   "warnings": {
-    "error" : "+101"
+    "error": "+101"
   },
   "namespace": true,
   "refmt": 3
