@@ -1,5 +1,7 @@
 node_modules
 .venv
 prs.json
+fedora-distgits.yaml
+new-distgits-added.txt
 lib
 *.bs.js

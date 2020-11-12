@@ -123,7 +123,6 @@ let addSourceRepositories =
       SF.SourceRepository.Full({
         name: topProject.name,
         connection: None,
-        description: None,
         zuul_include: Some([]),
       })
     );
@@ -163,9 +162,17 @@ let addSourceRepositories =
         };
         let origl = project.sourceRepositories->Belt.List.length;
         let newl = ret.sourceRepositories->Belt.List.length;
-        Js.log(
-          newSrsDedup->Belt.List.map(e => srName(e))->Belt.List.map(Js.log),
-        );
+        let newSrsDedupNames =
+          newSrsDedup->Belt.List.map(e => srName(e))
+          |> List.fold(~initial="", ~f=(output, name) =>
+               output ++ name ++ "\n"
+             );
+        {
+          let path = "./new-distgits-added.txt"
+          ReCli.Python.write_file(newSrsDedupNames, path)
+          ->Result.andThen(~f=_ => Js.log("Wrote " ++ path)->Ok)
+          ->Result.unwrapUnsafe;
+        };
         Js.log(
           "Added (after dedup) " ++ string_of_int(newl - origl) ++ " distgits",
         );
