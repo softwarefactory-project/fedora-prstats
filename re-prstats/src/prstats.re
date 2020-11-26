@@ -10,11 +10,51 @@ type pr = {
   author: string,
 };
 
-module Resources = {
-  let deccoToStringResult =
-      (deccoResult: Decco.result('a)): Result.t('a, string) =>
-    deccoResult->Result.mapError(~f=deccoError => deccoError.message);
+let deccoToStringResult =
+    (deccoResult: Decco.result('a)): Result.t('a, string) =>
+  deccoResult->Result.mapError(~f=deccoError => deccoError.message);
 
+module Pagure = {
+  [@decco]
+  type project_t = {fullname: string};
+
+  [@decco]
+  type group_t = {
+    name: string,
+    projects: list(project_t),
+  };
+
+  let get_group =
+      (baseurl: string, name: string)
+      : Js.Promise.t(Result.t(group_t, string)) => {
+    let url = baseurl ++ name ++ "?projects=1";
+    Js.log("Fetching " ++ url ++ "...");
+    Js.Promise.(
+      Axios.get(url)
+      |> then_(resp => resp##data |> resolve)
+      |> then_(json => json->group_t_decode->deccoToStringResult |> resolve)
+    );
+  };
+
+  let s_fp_get_group =
+    get_group("https://src.fedoraproject.org/api/0/group/");
+
+  let getGroupProjectList =
+      (name: string): Js.Promise.t(Result.t(list(project_t), string)) => {
+    Js.Promise.(
+      s_fp_get_group(name)
+      |> then_(result =>
+           result |> Result.andThen(~f=group => group.projects->Ok) |> resolve
+         )
+    );
+  };
+
+  let fromProjectListToNameList = (projects: list(project_t)): list(string) => {
+    projects->List.map(~f=project => project.fullname);
+  };
+};
+
+module Resources = {
   let loadData = (): Result.t(SF.Resources.t, string) =>
     "~/git/pagure.io/fedora-project-config/resources/fedora-distgits.yaml"
     ->{
@@ -222,4 +262,42 @@ let fromDGtoNewResources = (outputpath: string, projectname: string) => {
   ->Result.mapError(~f=err => Js.log("Unable to process due to: " ++ err));
 };
 
-fromDGtoNewResources("./fedora-distgits.yaml", "Fedora-Distgits");
+let fromPagureGrouptoNewResources =
+    (outputpath: string, projectname: string, groupname: string) => {
+  Resources.loadData()
+  ->Result.mapError(~f=err => "Unable to load resources: " ++ err)
+  ->Result.andThen(~f=res =>
+      Js.Promise.(
+        Pagure.getGroupProjectList(groupname)
+        |> then_(result =>
+             result
+             ->Result.andThen(~f=newProjects =>
+                 Resources.addSourceRepositories(
+                   projectname,
+                   res,
+                   newProjects->Pagure.fromProjectListToNameList,
+                 )
+                 ->Ok
+               )
+             ->Result.andThen(~f=res => res->Resources.dumpResources)
+             ->Result.andThen(~f=str => {
+                 Js.log("Writting into " ++ outputpath);
+                 ReCli.Python.write_file(str, outputpath);
+               })
+             ->resolve
+           )
+        |> catch(err => {
+             Js.log(err);
+             "Error occured"->Error |> resolve;
+           })
+      )
+      ->Ok
+    );
+};
+
+// fromDGtoNewResources("./fedora-distgits.yaml", "Fedora-Distgits");
+fromPagureGrouptoNewResources(
+  "./fedora-distgits.yaml",
+  "Fedora-Distgits",
+  "openstack-sig",
+);

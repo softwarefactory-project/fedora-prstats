@@ -21,7 +21,9 @@
   "dependencies": {
     "@glennsl/bs-json": "^5.0.2",
     "@softwarefactory-project/re-sf": "../../re-sf",
+    "bs-axios": "^0.0.43",
     "decco": "^1.3.0",
+    "isomorphic-fetch": "^3.0.0",
     "re-cli": "../../re-cli",
     "tablecloth-bucklescript": "https://github.com/darklang/tablecloth"
   }

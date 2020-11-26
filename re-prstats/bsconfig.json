@@ -13,9 +13,13 @@
   "bs-dependencies": [
     "tablecloth-bucklescript",
     "@glennsl/bs-json",
+    "bs-axios",
     "decco",
     "re-cli",
     "@softwarefactory-project/re-sf"
+  ],
+  "ppx-flags": [
+    "decco/ppx"
   ],
   "warnings": {
     "error": "+101"
