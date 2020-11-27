@@ -16,7 +16,13 @@ let deccoToStringResult =
 
 module Pagure = {
   [@decco]
-  type project_t = {fullname: string};
+  type access_users_t = {owner: list(string)};
+
+  [@decco]
+  type project_t = {
+    fullname: string,
+    access_users: access_users_t,
+  };
 
   [@decco]
   type group_t = {
@@ -36,6 +42,7 @@ module Pagure = {
     );
   };
 
+  // curry to src.fedoraproject.org
   let s_fp_get_group =
     get_group("https://src.fedoraproject.org/api/0/group/");
 
@@ -49,8 +56,67 @@ module Pagure = {
     );
   };
 
+  let checkDeadPackage =
+      (baseurl: string, name: string): Js.Promise.t((string, bool)) => {
+    let url = baseurl ++ name ++ "/tree/master/f/dead.package";
+    Js.log("Checking dead package for " ++ name ++ " ...");
+    Js.Promise.(
+      Axios.get(url)
+      |> then_(_resp =>
+           {
+             Js.log2("Dead package: ", name);
+             (name, true);
+           }
+           |> resolve
+         )
+      |> catch(_err => (name, false) |> resolve)
+    );
+  };
+
+  // curry to src.fedoraproject.org
+  let s_fp_checkDeadPackage =
+    checkDeadPackage("https://src.fedoraproject.org/api/0/");
+
+  let isOrphan = (project: project_t): bool => {
+    project.access_users.owner
+    |> List.filter(~f=user => user == "orphan")
+    |> List.length > 0;
+  };
+
   let fromProjectListToNameList = (projects: list(project_t)): list(string) => {
-    projects->List.map(~f=project => project.fullname);
+    // We will skip orphaned project
+    projects
+    ->List.filter(~f=p => !p->isOrphan)
+    ->List.map(~f=project => project.fullname);
+  };
+
+  let removeDeadPackages =
+      (projects: list(string)): Js.Promise.t(list(string)) => {
+    let promises = projects->List.map(~f=s_fp_checkDeadPackage);
+    let reduceToNotDeadProject = (e: list((string, bool))): list(string) => {
+      e
+      ->List.filter(~f=((_, isDead)) => !isDead)
+      ->List.map(~f=((name, _)) => name);
+    };
+
+    Js.Promise.(
+      all(promises |> Array.fromList)
+      |> then_(res => res->Array.to_list->reduceToNotDeadProject |> resolve)
+    );
+  };
+
+  let s_fp_getGroupPackagesWODeadOne =
+      (name: string)
+      : Js.Promise.t(Result.t(Js.Promise.t(list(string)), string)) => {
+    Js.Promise.(
+      getGroupProjectList(name)
+      |> then_(result =>
+           result->Result.andThen(~f=l =>
+             l->fromProjectListToNameList->removeDeadPackages->Ok
+           )
+           |> resolve
+         )
+    );
   };
 };
 
@@ -264,35 +330,40 @@ let fromDGtoNewResources = (outputpath: string, projectname: string) => {
 
 let fromPagureGrouptoNewResources =
     (outputpath: string, projectname: string, groupname: string) => {
+  let process = (res: SF.Resources.t) => {
+    Js.Promise.(
+      Pagure.s_fp_getGroupPackagesWODeadOne(groupname)
+      |> then_(result =>
+           result->Result.andThen(~f=p =>
+             Ok(
+               p
+               |> then_(newProjects =>
+                    Resources.addSourceRepositories(
+                      projectname,
+                      res,
+                      newProjects,
+                    )
+                    ->Ok
+                    |> Result.andThen(~f=res => res->Resources.dumpResources)
+                    |> Result.andThen(~f=str => {
+                         Js.log("Writting into " ++ outputpath);
+                         ReCli.Python.write_file(str, outputpath);
+                       })
+                    |> resolve
+                  ),
+             )
+           )
+           |> resolve
+         )
+      |> catch(err => {
+           Js.log(err);
+           "Error occured"->Error |> resolve;
+         })
+    );
+  };
   Resources.loadData()
   ->Result.mapError(~f=err => "Unable to load resources: " ++ err)
-  ->Result.andThen(~f=res =>
-      Js.Promise.(
-        Pagure.getGroupProjectList(groupname)
-        |> then_(result =>
-             result
-             ->Result.andThen(~f=newProjects =>
-                 Resources.addSourceRepositories(
-                   projectname,
-                   res,
-                   newProjects->Pagure.fromProjectListToNameList,
-                 )
-                 ->Ok
-               )
-             ->Result.andThen(~f=res => res->Resources.dumpResources)
-             ->Result.andThen(~f=str => {
-                 Js.log("Writting into " ++ outputpath);
-                 ReCli.Python.write_file(str, outputpath);
-               })
-             ->resolve
-           )
-        |> catch(err => {
-             Js.log(err);
-             "Error occured"->Error |> resolve;
-           })
-      )
-      ->Ok
-    );
+  ->Result.andThen(~f=res => res->process->Ok);
 };
 
 // fromDGtoNewResources("./fedora-distgits.yaml", "Fedora-Distgits");
