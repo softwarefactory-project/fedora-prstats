@@ -58,7 +58,7 @@ If you prefer we revert that Zuul setting for your distgit(s), please let us
 know by a reply to this email or open a PR to remove the distgit(s) from the
 configuration file [3]. We apologize for the inconvenience.
 
-[1]: https://lists.fedoraproject.org/archives/list/devel@lists.fedoraproject.org/thread/SUK6OXWP5HJXEMLSOXLCHN4JNADRK2FN/
+[1]: https://lists.fedoraproject.org/archives/list/devel@lists.fedoraproject.org/message/K6US7R6GUGGIID6S4PYMQGREUKL45QAW/
 [2]: https://fedoraproject.org/wiki/Zuul-based-ci
 [3]: https://pagure.io/fedora-project-config/blob/master/f/resources/fedora-distgits.yaml
 """

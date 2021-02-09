@@ -1,6 +1,7 @@
-#!bin/env python
+#!/bin/env python3
 
 import json
+import argparse
 import requests
 from typing import Dict, List
 from dataclasses import dataclass, asdict
@@ -8,7 +9,6 @@ from dataclasses import dataclass, asdict
 BASE_URL = "https://apps.fedoraproject.org/datagrepper/raw"
 TOPIC = "org.fedoraproject.prod.pagure.pull-request.new"
 PER_PAGE = 100
-DELTA = 3600 * 24 * 31 * 2  #  2 Months
 
 
 @dataclass
@@ -44,13 +44,14 @@ def get(base_url: str, params: QueryParams) -> Dict:
     return requests.get(base_url, params=asdict(params)).json()
 
 
-def crawl_pages(base_url, acc: List[Dict]):
+def crawl_pages(base_url, acc: List[Dict], since: int):
     read_pages = 0
     total_pages = 0
+    delta = 3600 * 24 * since
     while (read_pages == 0) or (read_pages <= total_pages - 1):
         try:
             params = QueryParams(
-                rows_per_page=PER_PAGE, delta=DELTA, topic=TOPIC, page=read_pages + 1
+                rows_per_page=PER_PAGE, delta=delta, topic=TOPIC, page=read_pages + 1
             )
             result = get(base_url, params)
             if not total_pages:
@@ -65,9 +66,12 @@ def crawl_pages(base_url, acc: List[Dict]):
             print("Unable to read from %s: %s" % (BASE_URL, exc))
 
 
-def main():
-    messages = []
-    crawl_pages(BASE_URL, acc=messages)
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Get Fedora distgit PR events")
+    parser.add_argument("--since-days", type=int, help="Since N days")
+    args = parser.parse_args()
+    messages: List[Dict] = []
+    crawl_pages(BASE_URL, acc=messages, since=args.since_days)
     json.dump(list(map(lambda x: asdict(decode(x)), messages)), open("prs.json", "w"))
 
 

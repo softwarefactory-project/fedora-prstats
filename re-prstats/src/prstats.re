@@ -366,9 +366,9 @@ let fromPagureGrouptoNewResources =
   ->Result.andThen(~f=res => res->process->Ok);
 };
 
-// fromDGtoNewResources("./fedora-distgits.yaml", "Fedora-Distgits");
-fromPagureGrouptoNewResources(
-  "./fedora-distgits.yaml",
-  "Fedora-Distgits",
-  "openstack-sig",
-);
+fromDGtoNewResources("./fedora-distgits.yaml", "Fedora-Distgits");
+// fromPagureGrouptoNewResources(
+//   "./fedora-distgits.yaml",
+//   "Fedora-Distgits",
+//   "openstack-sig",
+// );
