@@ -1,6 +1,7 @@
-#!/bin/env python
+#!/bin/env python3
 
 import sys
+import argparse
 import requests
 from ruamel.yaml import YAML
 from ruamel.yaml.scalarstring import PreservedScalarString as pss
@@ -11,7 +12,6 @@ from pathlib import Path
 
 INPUT = Path("../re-prstats/src/new-distgits-added.txt")
 APIURL = "https://src.fedoraproject.org/extras/pagure_owner_alias.json"
-OUTPUTPATH = Path("/tmp/mailer/spool")
 
 yaml = YAML()
 Registry = Dict[str, Set[str]]
@@ -36,7 +36,7 @@ def register(registry: Registry, maints: List[str], distgit: str) -> Registry:
     return nregistry
 
 
-def create_email(maint: str, distgits: List[str]) -> Dict:
+def create_email(maint: str, distgits: Set[str]) -> Dict:
     distgits_str = ", ".join(distgits)
     to = "%s@fedoraproject.org" % maint
     subject = "Some distgit(s) you maintain have been added to Fedora Zuul CI"
@@ -58,7 +58,7 @@ If you prefer we revert that Zuul setting for your distgit(s), please let us
 know by a reply to this email or open a PR to remove the distgit(s) from the
 configuration file [3]. We apologize for the inconvenience.
 
-[1]: https://lists.fedoraproject.org/archives/list/devel@lists.fedoraproject.org/message/K6US7R6GUGGIID6S4PYMQGREUKL45QAW/
+[1]: https://lists.fedoraproject.org/archives/list/devel@lists.fedoraproject.org/thread/WXVI7S55KBWTR6ESECM63UBNELGGVJEL/#CBJRYUTIZKA6BENJHI4S4NMAIWBYPAGA
 [2]: https://fedoraproject.org/wiki/Zuul-based-ci
 [3]: https://pagure.io/fedora-project-config/blob/master/f/resources/fedora-distgits.yaml
 """
@@ -69,9 +69,13 @@ configuration file [3]. We apologize for the inconvenience.
     }
 
 
-def main():
-    registry = {}
-    OUTPUTPATH.mkdir(parents=True, exist_ok=True)
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Create mails pool")
+    parser.add_argument("--output-path", type=str, help="Output path")
+    args = parser.parse_args()
+    registry: Registry = {}
+    outputpath = Path(args.output_path)
+    outputpath.mkdir(parents=True, exist_ok=True)
     names = INPUT.read_text().splitlines()
     print("Read %s distgit names" % len(names))
     # names = names[:3]
@@ -80,7 +84,7 @@ def main():
         maints = get_maintainers(distgit, aliases)
         registry = register(registry, maints, distgit)
     for maint, distgits in registry.items():
-        filename = Path(OUTPUTPATH) / Path("%s.yaml" % maint)
+        filename = Path(outputpath) / Path("%s.yaml" % maint)
         email = create_email(maint, distgits)
         print("Writting %s" % filename)
         with open(str(filename), "w") as fd:
